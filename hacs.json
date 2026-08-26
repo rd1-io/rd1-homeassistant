@@ -1,0 +1,7 @@
+{
+  "name": "RD1",
+  "render_readme": true,
+  "homeassistant": "2024.5.0",
+  "hacs": "1.34.0",
+  "zip_release": false
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "rd1",
+  "name": "RD1",
+  "codeowners": ["@rd1-io"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/rd1-io/rd1-homeassistant",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "zeroconf": ["_rd1._tcp.local."],
+  "version": "0.1.0"
+}

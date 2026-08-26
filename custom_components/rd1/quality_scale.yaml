@@ -1,0 +1,23 @@
+rules:
+  # Integration is fully async and has no blocking calls.
+  config-flow: done
+  config-flow-test-full-coverage: done
+  runtime-data: done
+  appropriate-polling: done
+  entity-unique-id: done
+  has-entity-name: done
+  entity-event-setup: done
+  dependency-transparency: done
+  action-setup: todo
+  common-modules: done
+  docs-high-level: done
+  docs-installation-parameters: done
+  docs-removal-instructions: done
+  entity-disabled-by-default: done
+  entity-translations: todo
+  exception-translations: done
+  icon-translations: todo
+  reauthentication-flow: todo
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
