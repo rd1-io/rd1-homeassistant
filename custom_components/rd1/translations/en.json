@@ -2,14 +2,14 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect an RD1 controller",
-        "description": "Enter the controller (CU) IP address or hostname. The device is also discovered automatically via mDNS when on the same network.",
+        "title": "Connect an rd1.io controller",
+        "description": "Enter the controller IP address or hostname. On the same network the device is discovered automatically.",
         "data": {
           "host": "Host (IP or hostname)"
         }
       },
       "zeroconf_confirm": {
-        "title": "RD1 controller discovered",
+        "title": "rd1.io controller discovered",
         "description": "Found device {serial} ({product}) at {host}. Confirm to connect."
       }
     },
