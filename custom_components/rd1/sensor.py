@@ -41,12 +41,14 @@ class Rd1Sensor(Rd1Entity, SensorEntity):
         self._attr_device_class = desc.get("device_class")
         self._attr_state_class = desc.get("state_class")
         self._attr_native_unit_of_measurement = desc.get("unit")
-        self._attr_suggested_display_precision = sensor_display_precision(desc)
+        precision = sensor_display_precision(desc)
+        self._attr_suggested_display_precision = precision
+        self._attr_native_precision = precision
 
     @property
     def native_value(self) -> Any:
         value = self._attr("value")
-        precision = self._attr_suggested_display_precision
+        precision = self._attr_native_precision
         if isinstance(value, float) and precision is not None:
             return round(value, precision)
         return value

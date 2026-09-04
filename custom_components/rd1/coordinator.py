@@ -15,7 +15,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import Rd1ApiClient
-from .const import DOMAIN, POLL_INTERVAL
+from .config_flow import entry_title
+from .const import CONF_HOST, DOMAIN, POLL_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,19 +52,34 @@ class Rd1Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         return list(self.catalog.get("entities") or [])
 
     def device_info(self) -> dict[str, Any]:
+        host = str(self.entry.data.get(CONF_HOST) or self.client.host)
         info: dict[str, Any] = {
             "identifiers": {(DOMAIN, self.serial)},
             "name": self.catalog.get("name") or self.catalog.get("product") or self.serial,
             "manufacturer": "rd1.io",
             "model": self.catalog.get("product") or self.serial,
         }
+        if host:
+            info["configuration_url"] = f"http://{host}"
         if self.catalog.get("sw_version"):
             info["sw_version"] = self.catalog["sw_version"]
         if self.catalog.get("hw_version"):
             info["hw_version"] = self.catalog["hw_version"]
         return info
 
+    def sync_entry_title(self) -> None:
+        host = str(self.entry.data.get(CONF_HOST) or self.client.host)
+        name = str(self.catalog.get("name") or self.catalog.get("product") or self.serial)
+        title = entry_title(name, host)
+        if self.entry.title != title:
+            self.hass.config_entries.async_update_entry(self.entry, title=title)
+
     async def _async_update_data(self) -> dict[str, Any]:
+        host = str(self.entry.data.get(CONF_HOST) or "")
+        if host and host != self.client.host:
+            self.client.set_host(host)
+            self.sync_entry_title()
+
         try:
             status = await self.client.get_status()
         except Exception as exc:  # noqa: BLE001 — surfaced to HA as UpdateFailed

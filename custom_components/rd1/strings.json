@@ -25,6 +25,22 @@
       "bad_serial": "Некорректный серийный номер"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Адрес контроллера",
+        "description": "IP или hostname, по которому Home Assistant опрашивает устройство.",
+        "data": {
+          "host": "Хост (IP или hostname)"
+        }
+      }
+    },
+    "error": {
+      "unreachable": "Устройство недоступно или не отвечает на /api/ha",
+      "unsupported_api": "Устройство отдало неподдерживаемый ha_api",
+      "serial_mismatch": "По этому адресу другой серийный номер — добавьте его отдельной записью"
+    }
+  },
   "exceptions": {
     "co2_auto": {
       "message": "Сначала выключите CO₂-авторежим"

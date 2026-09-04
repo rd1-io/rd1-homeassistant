@@ -25,6 +25,22 @@
       "bad_serial": "Invalid serial number"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Controller address",
+        "description": "IP or hostname Home Assistant uses to poll this device.",
+        "data": {
+          "host": "Host (IP or hostname)"
+        }
+      }
+    },
+    "error": {
+      "unreachable": "Device unreachable or not answering on /api/ha",
+      "unsupported_api": "Device reports an unsupported ha_api",
+      "serial_mismatch": "That address belongs to a different serial — add it as a separate entry"
+    }
+  },
   "exceptions": {
     "co2_auto": {
       "message": "Disable CO2 auto mode first"

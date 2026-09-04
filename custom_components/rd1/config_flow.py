@@ -11,8 +11,14 @@ import re
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_HOST
+from homeassistant.core import callback
 from homeassistant.helpers import aiohttp_client
 
 from .api import Rd1ApiClient, Rd1ApiError
@@ -28,6 +34,17 @@ def _host_from_discovery(info: Any) -> str:
     return str(host).rstrip(".")
 
 
+def entry_title(name: str, host: str) -> str:
+    """Integration row: device name plus the address HA talks to."""
+    host = host.strip().rstrip(".")
+    name = (name or "").strip()
+    if not name:
+        return host
+    if not host:
+        return name
+    return f"{name} · {host}"
+
+
 class Rd1ConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for RD1."""
 
@@ -38,6 +55,11 @@ class Rd1ConfigFlow(ConfigFlow, domain=DOMAIN):
         self._discovered_host: str | None = None
         self._catalog: dict[str, Any] | None = None
         self._discovery_placeholders: dict[str, str] = {}
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return Rd1OptionsFlow()
 
     async def _validate_host(self, host: str) -> dict[str, Any]:
         """Fetch /api/ha from the host; raise ValueError with a reason on failure."""
@@ -103,8 +125,43 @@ class Rd1ConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     def _make_entry(self, host: str, serial: str, catalog: dict[str, Any]) -> ConfigFlowResult:
-        title = str(catalog.get("name") or catalog.get("product") or serial)
+        name = str(catalog.get("name") or catalog.get("product") or serial)
         return self.async_create_entry(
-            title=title,
+            title=entry_title(name, host),
             data={CONF_HOST: host, CONF_SERIAL: serial},
+        )
+
+
+class Rd1OptionsFlow(OptionsFlow):
+    """Change the controller address without removing the integration."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        current = str(self.config_entry.data.get(CONF_HOST) or "")
+        if user_input is not None:
+            host = str(user_input[CONF_HOST]).strip()
+            session = aiohttp_client.async_get_clientsession(self.hass)
+            client = Rd1ApiClient(session, host)
+            try:
+                catalog = await client.get_catalog()
+            except Rd1ApiError:
+                errors["base"] = "unreachable"
+            else:
+                if catalog.get("ha_api") != 1:
+                    errors["base"] = "unsupported_api"
+                elif str(catalog.get("serial") or "") != str(self.config_entry.data.get(CONF_SERIAL)):
+                    errors["base"] = "serial_mismatch"
+                else:
+                    name = str(catalog.get("name") or catalog.get("product") or catalog.get("serial"))
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={**self.config_entry.data, CONF_HOST: host},
+                        title=entry_title(name, host),
+                    )
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    return self.async_create_entry(title="", data={})
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({vol.Required(CONF_HOST, default=current): str}),
+            errors=errors,
         )

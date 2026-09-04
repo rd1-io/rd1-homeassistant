@@ -59,6 +59,7 @@ async def test_user_flow_manual_host(mock_get, _session, hass: HomeAssistant):
     result = await flow.async_step_user({CONF_HOST: "192.168.1.10"})
     assert result["type"] == "create_entry"
     assert result["data"] == {CONF_HOST: "192.168.1.10", CONF_SERIAL: "RD1S-AABBCC"}
+    assert result["title"] == "Sauna1 Controller · 192.168.1.10"
 
 
 @patch("custom_components.rd1.config_flow.aiohttp_client.async_get_clientsession")

@@ -24,12 +24,15 @@ class Rd1ApiClient:
 
     def __init__(self, session: aiohttp.ClientSession, host: str) -> None:
         self._session = session
-        self._host = host.rstrip("/")
-        self._base = f"http://{self._host}"
+        self.set_host(host)
 
     @property
     def host(self) -> str:
         return self._host
+
+    def set_host(self, host: str) -> None:
+        self._host = host.rstrip("/")
+        self._base = f"http://{self._host}"
 
     async def _get_json(self, path: str) -> dict[str, Any]:
         url = f"{self._base}{path}"

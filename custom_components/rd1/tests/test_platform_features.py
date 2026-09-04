@@ -5,6 +5,7 @@ import pytest
 pytest.importorskip("homeassistant")
 
 from custom_components.rd1.climate import climate_supported_features
+from custom_components.rd1.config_flow import entry_title
 from custom_components.rd1.fan import fan_supported_features
 from custom_components.rd1.sensor import sensor_display_precision
 from homeassistant.components.climate import ClimateEntityFeature
@@ -46,6 +47,15 @@ def test_climate_declares_temperature_and_on_off():
     assert features & ClimateEntityFeature.TARGET_TEMPERATURE
     assert features & ClimateEntityFeature.TURN_ON
     assert features & ClimateEntityFeature.TURN_OFF
+
+
+def test_entry_title_includes_host():
+    assert entry_title("Ventilation1 Controller", "192.168.1.73") == (
+        "Ventilation1 Controller · 192.168.1.73"
+    )
+    assert entry_title("Ventilation1 Controller", "rd1-35fd94.local.") == (
+        "Ventilation1 Controller · rd1-35fd94.local"
+    )
 
 
 def test_sensor_precision_defaults():

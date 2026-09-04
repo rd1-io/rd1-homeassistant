@@ -51,6 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
 
     coordinator.last_reload_rev = coordinator.rev
+    coordinator.sync_entry_title()
     entry.async_on_unload(
         coordinator.async_add_listener(_reload_on_rev_change)
     )
