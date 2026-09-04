@@ -52,6 +52,8 @@ class Rd1Entity(CoordinatorEntity[Rd1Coordinator], Entity):
         try:
             await self.coordinator.client.post_command(command)
         except HomeAssistantError:
+            self.coordinator.clear_optimistic()
             await self.coordinator.async_request_refresh()
             raise
+        self.coordinator.apply_command_optimistic(self.desc, name, command, fields or {})
         await self.coordinator.async_request_refresh()

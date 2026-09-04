@@ -8,6 +8,7 @@ first poll / older firmware that does not publish `ha_rev`).
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -17,6 +18,12 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import Rd1ApiClient
 from .config_flow import entry_title
 from .const import CONF_HOST, DOMAIN, POLL_INTERVAL
+from .state_resolver import (
+    apply_pointer_patches,
+    command_status_patches,
+    expand_linked_patches,
+    pointer_get,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +49,8 @@ class Rd1Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.status: dict[str, Any] = {}
         self.rev: int | None = None
         self.last_reload_rev: int | None = None
+        self._optimistic: dict[str, Any] = {}
+        self._optimistic_until: float = 0.0
 
     @property
     def serial(self) -> str:
@@ -73,6 +82,49 @@ class Rd1Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         title = entry_title(name, host)
         if self.entry.title != title:
             self.hass.config_entries.async_update_entry(self.entry, title=title)
+
+    def apply_command_optimistic(
+        self,
+        desc: dict[str, Any],
+        command_name: str,
+        command: dict[str, Any],
+        fields: dict[str, Any],
+    ) -> None:
+        """Show the commanded values immediately; keep them over stale polls."""
+        patches = expand_linked_patches(
+            self.catalog,
+            command_status_patches(desc, command_name, command, fields),
+        )
+        if not patches:
+            return
+        self._optimistic.update(patches)
+        self._optimistic_until = time.monotonic() + 10.0
+        self.status = apply_pointer_patches(self.status, self._optimistic)
+        self.async_set_updated_data({"catalog": self.catalog, "status": self.status})
+
+    def clear_optimistic(self) -> None:
+        self._optimistic.clear()
+        self._optimistic_until = 0.0
+
+    def _reconcile_optimistic(self, status: dict[str, Any]) -> dict[str, Any]:
+        if not self._optimistic:
+            return status
+        if time.monotonic() > self._optimistic_until:
+            self._optimistic.clear()
+            return status
+        confirmed: list[str] = []
+        for ptr, expected in self._optimistic.items():
+            try:
+                actual = pointer_get(status, ptr)
+            except (KeyError, TypeError, ValueError):
+                continue
+            if actual == expected:
+                confirmed.append(ptr)
+        for ptr in confirmed:
+            del self._optimistic[ptr]
+        if not self._optimistic:
+            return status
+        return apply_pointer_patches(status, self._optimistic)
 
     async def _async_update_data(self) -> dict[str, Any]:
         host = str(self.entry.data.get(CONF_HOST) or "")
@@ -113,5 +165,6 @@ class Rd1Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.catalog = catalog
                 self.rev = new_rev
 
+        status = self._reconcile_optimistic(status)
         self.status = status
         return {"catalog": self.catalog, "status": status}

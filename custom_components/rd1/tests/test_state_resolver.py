@@ -2,9 +2,12 @@
 
 from custom_components.rd1.state_resolver import (
     MISSING,
+    apply_pointer_patches,
     attr_bool,
     build_command,
+    command_status_patches,
     entity_available,
+    expand_linked_patches,
     resolve,
 )
 
@@ -107,3 +110,53 @@ def test_build_command_preset_none_uses_empty_key():
         {"preset_mode": None},
     )
     assert cmd == {"type": "set_power", "auto": False}
+
+
+FAN = {
+    "state": {
+        "is_on": {"ptr": "/ventilation/on"},
+        "percentage": {"ptr": "/ventilation/power_level", "scale": 20},
+    },
+    "commands": {
+        "turn_on": {"type": "set_power", "value": 3},
+        "turn_off": {"type": "set_power", "value": 0},
+        "set_percentage": {
+            "type": "set_power",
+            "value": {"from": "percentage", "scale": 0.05, "round": "nearest"},
+        },
+    },
+}
+
+NUMBER = {
+    "state": {"value": {"ptr": "/ventilation/power_level", "scale": 20}},
+    "commands": {
+        "set_value": {
+            "type": "set_power",
+            "value": {"from": "value", "scale": 0.05, "round": "nearest"},
+        },
+    },
+}
+
+
+def test_command_patches_number_set_value():
+    cmd = build_command(NUMBER["commands"]["set_value"], {"value": 80})
+    patches = command_status_patches(NUMBER, "set_value", cmd, {"value": 80})
+    assert patches["/ventilation/power_level"] == 4
+    linked = expand_linked_patches({"entities": [FAN, NUMBER]}, patches)
+    assert linked["/ventilation/on"] is True
+
+
+def test_command_patches_fan_turn_off():
+    cmd = build_command(FAN["commands"]["turn_off"], {})
+    patches = command_status_patches(FAN, "turn_off", cmd, {})
+    assert patches["/ventilation/power_level"] == 0
+    assert patches["/ventilation/on"] is False
+
+
+def test_stale_status_keeps_optimistic_power():
+    status = {"ventilation": {"power_level": 0, "on": False}}
+    patches = {"/ventilation/power_level": 4, "/ventilation/on": True}
+    merged = apply_pointer_patches(status, patches)
+    assert merged["ventilation"]["power_level"] == 4
+    assert merged["ventilation"]["on"] is True
+    assert status["ventilation"]["power_level"] == 0
