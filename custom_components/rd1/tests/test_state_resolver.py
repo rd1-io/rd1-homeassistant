@@ -2,6 +2,7 @@
 
 from custom_components.rd1.state_resolver import (
     MISSING,
+    attr_bool,
     build_command,
     entity_available,
     resolve,
@@ -52,6 +53,19 @@ def test_map_bool_key():
 def test_map_gt_satisfied_and_not():
     assert resolve({"ptr": "/climate/target_humidity", "map_gt": 0}, STATUS) == (45, True)
     assert resolve({"ptr": "/ventilation/power_level", "map_gt": 3}, STATUS) == (MISSING, True)
+
+
+def test_attr_bool_map_gt_zero_is_off_not_unknown():
+    desc = {"state": {"is_on": {"ptr": "/climate/target_humidity", "map_gt": 0}}}
+    assert attr_bool(desc, "is_on", STATUS) is True
+    assert attr_bool(desc, "is_on", {"climate": {"target_humidity": 0}}) is False
+
+
+def test_attr_bool_commanded_on():
+    desc = {"state": {"is_on": {"ptr": "/ventilation/on"}}}
+    assert attr_bool(desc, "is_on", {"ventilation": {"on": True}}) is True
+    assert attr_bool(desc, "is_on", {"ventilation": {"on": False}}) is False
+    assert attr_bool(desc, "is_on", {}) is None
 
 
 def test_valid_false_makes_unavailable():

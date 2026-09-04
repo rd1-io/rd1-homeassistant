@@ -99,6 +99,20 @@ def attr(entity_desc: dict[str, Any], attribute: str, status: dict[str, Any]) ->
     return resolve(ptr_spec, status)
 
 
+def attr_bool(entity_desc: dict[str, Any], attribute: str, status: dict[str, Any]) -> bool | None:
+    """Resolve a boolean attribute.
+
+    `map_gt` miss (power 0, humidity 0) is a real off, not unknown. A
+    pointer that does not resolve stays unknown.
+    """
+    value, available = attr(entity_desc, attribute, status)
+    if value is MISSING:
+        return False if available else None
+    if value is None:
+        return None
+    return bool(value)
+
+
 def entity_available(entity_desc: dict[str, Any], status: dict[str, Any]) -> bool:
     """An entity is available when every declared validity flag is true."""
     state = entity_desc.get("state") or {}

@@ -9,7 +9,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import Rd1Coordinator
-from .state_resolver import MISSING, attr, build_command, entity_available
+from .state_resolver import MISSING, attr, attr_bool, build_command, entity_available
 
 
 class Rd1Entity(CoordinatorEntity[Rd1Coordinator], Entity):
@@ -36,10 +36,7 @@ class Rd1Entity(CoordinatorEntity[Rd1Coordinator], Entity):
         return None if value is MISSING else value
 
     def _attr_bool(self, attribute: str) -> bool | None:
-        value = self._attr(attribute)
-        if value is None:
-            return None
-        return bool(value)
+        return attr_bool(self.desc, attribute, self.coordinator.status)
 
     async def _send_command(self, name: str, fields: dict[str, Any] | None = None) -> None:
         """Instantiate a catalog command from the HA service call and POST it.
