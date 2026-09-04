@@ -11,6 +11,7 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -28,13 +29,25 @@ _HVAC_ACTIONS = {
 }
 
 
+def climate_supported_features(desc: dict[str, Any]) -> ClimateEntityFeature:
+    """Declare climate features from the catalog."""
+    commands = desc.get("commands") or {}
+    features = ClimateEntityFeature(0)
+    if "set_temperature" in commands or (desc.get("state") or {}).get("target_temp"):
+        features |= ClimateEntityFeature.TARGET_TEMPERATURE
+    if "off" in (desc.get("hvac_modes") or []):
+        features |= ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+    return features
+
+
 class Rd1Climate(Rd1Entity, ClimateEntity):
     """A catalog climate entity."""
 
-    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
     def __init__(self, coordinator: Rd1Coordinator, desc: dict[str, Any]) -> None:
         super().__init__(coordinator, desc)
+        self._attr_supported_features = climate_supported_features(desc)
         self._attr_hvac_modes = [HVACMode(m) for m in desc.get("hvac_modes") or []]
         self._attr_min_temp = desc.get("min_temp")
         self._attr_max_temp = desc.get("max_temp")

@@ -14,14 +14,28 @@ from .coordinator import Rd1Coordinator
 from .entity import Rd1Entity
 
 
+def fan_supported_features(desc: dict[str, Any]) -> FanEntityFeature:
+    """Declare HA fan features from the catalog (HA 2024.8+ requires on/off flags)."""
+    commands = desc.get("commands") or {}
+    features = FanEntityFeature(0)
+    if "turn_on" in commands:
+        features |= FanEntityFeature.TURN_ON
+    if "turn_off" in commands:
+        features |= FanEntityFeature.TURN_OFF
+    if desc.get("percentage_step") is not None:
+        features |= FanEntityFeature.SET_SPEED
+    if desc.get("preset_modes") and "set_preset_mode" in commands:
+        features |= FanEntityFeature.PRESET_MODE
+    return features
+
+
 class Rd1Fan(Rd1Entity, FanEntity):
     """A catalog fan: is_on/percentage/preset_mode ← state pointers."""
 
     def __init__(self, coordinator: Rd1Coordinator, desc: dict[str, Any]) -> None:
         super().__init__(coordinator, desc)
-        self._attr_supported_features = FanEntityFeature(0)
+        self._attr_supported_features = fan_supported_features(desc)
         if desc.get("percentage_step") is not None:
-            self._attr_supported_features |= FanEntityFeature.SET_SPEED
             self._attr_percentage_step = float(desc["percentage_step"])
         self._attr_preset_modes = list(desc.get("preset_modes") or [])
 
